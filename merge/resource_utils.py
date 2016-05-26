@@ -28,9 +28,11 @@ def strip_xml_dec(content):
 def get_local_dir(local):
     cwd = get_working_dir()
     if (cwd.find("home")>=0):  
-        local_d = "/home/docmerge/"+install_name+"/"+local_root+"/"+local
+        local_d = os.path.join(cwd, local_root, local)
     else:  
-        local_d = "C:\\Users\\Andrew\\Documents\\GitHub\\"+install_name+"\\"+local_root+"\\"+local
+        local_d = os.path.join(cwd, local_root, local)
+
+#        local_d = "C:\\Users\\Andrew\\Documents\\GitHub\\"+install_name+"\\"+local_root+"\\"+local
     return local_d
 
 def get_output_dir():

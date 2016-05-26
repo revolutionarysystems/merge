@@ -13,6 +13,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import difflib
+from subprocess import check_output
 
 from .resource_utils import (
     get_working_dir, strip_xml_dec, get_output_dir, get_local_dir, get_local_txt_content)
@@ -426,4 +427,10 @@ def combine_docx_direct(file_names_to_combine, file_name_out):
     shutil.rmtree(tmp_dir)
     return({"file":file_name_out})
 
+def shellCommand(command):
+    return check_output(command, shell=True).decode()
 
+def convert_pdf(filename_in, filename_out, outdir = "."):
+    command = "soffice --headless --convert-to pdf "+filename_in+" --outdir "+outdir
+    response = shellCommand("soffice --headless --convert-to pdf "+filename_in+" --outdir "+outdir)
+    return {"file":filename_out, "response":response, "command": command}

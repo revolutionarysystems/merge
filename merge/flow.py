@@ -9,7 +9,7 @@ import json
 from .gd_resource_utils import (folder_file, folder, uploadAsGoogleDoc, uploadFile, 
     exportFile, getFile, file_content_as)
 from .merge_utils import (substituteVariablesDocx, substituteVariablesDocx_direct, substituteVariablesPlain,
-    convert_markdown, email_file, 
+    convert_markdown, convert_pdf, email_file, 
     combine_docx, combine_docx_direct, extract_regex_matches_docx,
     substituteVariablesPlainString, merge_docx_footer, merge_docx_header)
 from .resource_utils import (push_local_txt, push_local_txt_fullname)
@@ -229,6 +229,13 @@ def process_markdown(step, localMergedFileName):
     outcome = convert_markdown(localMergedFileName+step["local_ext"], localMergedFileName+".html")  
     return outcome
 
+# convert to pdf
+def process_pdf(step, localMergedFileName):
+    output_dir = localMergedFileName[:localMergedFileName.rfind("/")]
+    outcome = convert_pdf(localMergedFileName+step["local_ext"], localMergedFileName+".pdf", outdir=output_dir)  
+    return outcome
+
+
 # upload to Google drive, optionally converting to Google Drive format
 def process_upload(step, localFileName, subfolder, upload_id):
     if subfolder:
@@ -322,6 +329,9 @@ def process_flow(cwd, flow, template_remote_folder, template_subfolder, template
 
             if step["step"]=="markdown":
                 outcome = process_markdown(step, localMergedFileName)
+
+            if step["step"]=="pdf":
+                outcome = process_pdf(step, localMergedFileName)
 
             if step["step"]=="upload":
                 if local_folder=="templates":

@@ -21,17 +21,21 @@ def get_credentials():
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     credential_path = os.path.join(credential_dir, 'drive-echopublish.json')
+    print("Looking for credentials at:",credential_path)
 
     store = oauth2client.file.Storage(credential_path)
     credentials = store.get()
     if not credentials or credentials.invalid:
         flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
         flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else: # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
-        print('Storing credentials to ' + credential_path)
+        try:
+            if flags:
+                credentials = tools.run_flow(flow, store, flags)
+            else: # Needed only for compatibility with Python 2.6
+                credentials = tools.run(flow, store)
+            print('Storing credentials to ' + credential_path)
+        except Exception as e:
+            print("No credentials at:", credential_path)
     return credentials
 
 
@@ -286,7 +290,7 @@ SCOPES = 'https://www.googleapis.com/auth/drive'
 CLIENT_SECRET_FILE = 'client_secret.json'
 if (os.getcwd().find("home")>=0):  #pythonanywhere deployment
 #    CLIENT_SECRET_FILE = '/home/docmerge/'+install_name+'/client_secret.json'
-    CLIENT_SECRET_FILE = os.path.join([os.getcwd(),install_name,'client_secret.json'])
+    CLIENT_SECRET_FILE = os.path.join(os.getcwd(),'client_secret.json')
 APPLICATION_NAME = 'Echo Publish'
 
 service = initialiseService()
