@@ -25,6 +25,13 @@ def strip_xml_dec(content):
     else:
         return content
 
+def get_xml_dec(content):
+    xml_dec_start = content.find("<?xml")
+    if xml_dec_start>=0:
+        return content[:content.find(">")+1]
+    else:
+        return content
+
 def get_local_dir(local):
     cwd = get_working_dir()
     if (cwd.find("home")>=0):  

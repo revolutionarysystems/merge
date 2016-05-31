@@ -7,7 +7,9 @@ import oauth2client
 from oauth2client import tools
 from oauth2client import client
 from apiclient import errors
+from apiclient.errors import HttpError
 from .config import install_name, gdrive_root
+from time import sleep
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -21,7 +23,7 @@ def get_credentials():
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     credential_path = os.path.join(credential_dir, 'drive-echopublish.json')
-    print("Looking for credentials at:",credential_path)
+#    print("Looking for credentials at:",credential_path)
 
     store = oauth2client.file.Storage(credential_path)
     credentials = store.get()
@@ -166,13 +168,26 @@ def folder_contents(parent, mimeType='application/vnd.google-apps.folder', field
 #        return [{"name":"Google Drive Retrieval failed", "mimeType":"error"}]
     return items
 
+def protected_execute(query, max_tries=4, wait_time=0.2):
+    for i in range(max_tries):
+        try:
+            results = service.files().list(fields="nextPageToken, files(id, name, mimeType, parents)", q=query).execute()
+            break
+        except (HttpError, TypeError) as e  :
+            if i+1<max_tries:
+                sleep(wait_time)
+                wait_time = 2* wait_time
+            else:
+                raise e
+    return results
+
+
 def folder_item(parent, name, mimeType='application/vnd.google-apps.folder', ):
     if mimeType=="*":
         q = "name = '"+name+"' and '"+parent+"' in parents"
     else:
         q = "mimeType = '"+mimeType+"' and name = '"+name+"' and '"+parent+"' in parents"
-    results = service.files().list(
-        fields="nextPageToken, files(id, name, mimeType, parents)", q=q).execute()
+    results = protected_execute(q)
     items = results.get('files', [])
     try:
         return items[0]

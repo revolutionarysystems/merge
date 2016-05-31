@@ -325,7 +325,7 @@ def process_flow(cwd, flow, template_remote_folder, template_subfolder, template
                 outcome = process_merge2(cwd, uniq, step, localTemplateFileName, template_subfolder, localMergedFileName, localMergedFileNameOnly, output_subfolder, subs)
 
             if step["step"]=="compound_merge2": #template_name is a list of template names in a json file
-                outcome = process_compound_merge(cwd, uniq, step, template_subfolder, template_name, output_subfolder, subs)
+                outcome = process_compound_merge2(cwd, uniq, step, template_subfolder, template_name, output_subfolder, subs)
 
             if step["step"]=="markdown":
                 outcome = process_markdown(step, localMergedFileName)

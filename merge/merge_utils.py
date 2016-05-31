@@ -14,9 +14,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import difflib
 from subprocess import check_output
+import lxml.etree as etree
 
 from .resource_utils import (
-    get_working_dir, strip_xml_dec, get_output_dir, get_local_dir, get_local_txt_content)
+    get_working_dir, strip_xml_dec, get_xml_dec, get_output_dir, get_local_dir, get_local_txt_content)
 from .config import install_name
 
 def replaceParams(txt, subs):
@@ -364,13 +365,52 @@ def get_docx_content(filename):
     filenames = zip.namelist()
     tmp_dir = tempfile.mkdtemp()
     zip.extractall(tmp_dir)
+    xml_str = zip.read("word/_rels/document.xml.rels").decode("utf8")
+    rel_xml_content = strip_xml_dec(xml_str)
+    rel_xml_dec = get_xml_dec(xml_str)
+    rel_dom = etree.fromstring(rel_xml_content)
     response = {}
-    #xml_content = zip.read("word/document.xml").decode("utf8")
-    #paras_start = xml_content.find("<w:p")
-    #paras_end = xml_content.rfind("</w:p>")+6
     response["paras"] = get_docx_paras(zip)
     response["numbering"] = get_docx_numbering(zip)
+    response["tmp_dir"] = tmp_dir
+    response["filenames"] = filenames
+    response["rel_dom"] = rel_dom
+    # get images too
+    # return tmp_dir too
     return response
+
+def copy_docx_media(tmp_dir_from, tmp_dir_to, filenames_from, filenames_to, rel_0, max_Rel_id):
+    rel_elements = []
+    renames = []
+    for filename in filenames_from:
+        if filename.find("word/media/")==0:
+#            filename=filename.replace("/",os.sep)
+            print("media file:",tmp_dir_from, tmp_dir_to,  filename)
+            source = os.path.join(tmp_dir_from,filename)
+            dest = os.path.join(tmp_dir_to,filename)
+            if not os.path.exists(os.path.split(dest)[0]):
+                os.makedirs(os.path.split(dest)[0])
+            print(filenames_to)
+            if filename in filenames_to:
+                oldfilename = filename
+                i = 1
+                while filename in filenames_to:
+                    filename = "word/media/image"+"{0:0>2}".format(i)+".png"
+                    i+=1
+                print(oldfilename,">",filename)
+                renames.append((os.path.split(oldfilename)[1],os.path.split(filename)[1]))
+                dest = os.path.join(tmp_dir_to,filename)
+            else:
+                renames.append((os.path.split(filename)[1],os.path.split(filename)[1]))
+            shutil.copyfile(source.replace("/",os.sep),dest.replace("/",os.sep))
+            filenames_to.append(filename)
+            new_rel_el = etree.Element("Relationship", attrib={"Id":"".join(["rId", str(max_Rel_id+1)]), 
+                "Type":rel_0.attrib["Type"].replace("settings","image"), 
+                "Target":"/".join(["media",os.path.split(filename)[1]])})
+            print(">>rel",os.path.split(filename)[1],"".join(["rId", str(max_Rel_id+1)]))
+            rel_elements.append(new_rel_el)
+            max_Rel_id+=1
+    return filenames_to, rel_elements, renames
 
 def combine_docx_direct(file_names_to_combine, file_name_out):
     docx_filename = file_names_to_combine[0]
@@ -380,6 +420,12 @@ def combine_docx_direct(file_names_to_combine, file_name_out):
     tmp_dir = tempfile.mkdtemp()
     zip.extractall(tmp_dir)
     main_xml_content = zip.read("word/document.xml").decode("utf8")
+    xml_str = zip.read("word/_rels/document.xml.rels").decode("utf8")
+    rel_xml_content = strip_xml_dec(xml_str)
+    rel_xml_dec = get_xml_dec(xml_str)
+    rel_dom = etree.fromstring(rel_xml_content)
+    max_Rel_id = len(rel_dom)
+    rel_0  = rel_dom[0]
     main_abs_num, main_num, main_number_xml = get_docx_numbering(zip)
     insertion_point = main_xml_content.find("<w:sectPr>")
     count, number_of_files = 0, len(file_names_to_combine)
@@ -389,6 +435,8 @@ def combine_docx_direct(file_names_to_combine, file_name_out):
             main_xml_content = main_xml_content[:insertion_point]+break_xml+main_xml_content[insertion_point:]
             insertion_point+=len(break_xml)
         else:    
+            print()
+            print("next file:", file)
             sub_xml_content = get_docx_content(file)
             sub_xml_paras = sub_xml_content["paras"]
             abs_num, num, sub_num_xml = sub_xml_content["numbering"]
@@ -406,21 +454,58 @@ def combine_docx_direct(file_names_to_combine, file_name_out):
                         main_num[new_key]=num[key].replace('w:numId="'+key+'"', 'w:numId="'+new_key+'"').replace('<w:abstractNumId w:val="'+key+'"/>','<w:abstractNumId w:val="'+new_key+'"/>')
                         sub_xml_paras = sub_xml_paras.replace('<w:numId w:val="'+key+'"/>', '<w:numId w:val="'+new_key+'"/>')
 
+
+            #Now move media files:  # incomplete - also need to correct relationships
+            filenames, rel_elements, renames= copy_docx_media(sub_xml_content["tmp_dir"], tmp_dir, sub_xml_content["filenames"], filenames, rel_0, max_Rel_id)
+
+#            rel_renames = []
+            for rename in renames:
+                print(rename)
+                sub_xml_paras = sub_xml_paras.replace(rename[0],rename[1])
+                for element in rel_elements:
+                    if element.attrib["Target"]=="media/"+rename[1]:
+                        new_rel = element.attrib["Id"]
+
+                        # make sure the replacement is right
+
+                for element in sub_xml_content["rel_dom"]:
+                    if element.attrib["Target"]=="media/"+rename[0]:
+                        old_rel = element.attrib["Id"]
+                print(">>replacing", old_rel, ">", new_rel)
+                sub_xml_paras = sub_xml_paras.replace(old_rel,new_rel)
+#                rel_renames.append((old_rel, new_rel))
+
+ 
+            for element in rel_elements:
+                rel_dom.append(element)
+
+            max_Rel_id += len(rel_elements)
+
             main_xml_content = main_xml_content[:insertion_point]+sub_xml_paras+main_xml_content[insertion_point:]
             insertion_point+=len(sub_xml_paras)
-            main_number_xml_pre = main_number_xml[:main_number_xml.find("<w:abstractNum ")]
-            main_number_xml_post = main_number_xml[main_number_xml.rfind("</w:num>")+8:]
-            main_number_xml = main_number_xml_pre
-            for scheme in main_abs_num.values():
-                main_number_xml+=scheme
-            for scheme in main_num.values():
-                main_number_xml+=scheme
-            main_number_xml+=main_number_xml_post
+            if main_number_xml.find("<w:abstractNum ") >=0:
+                main_number_xml_pre = main_number_xml[:main_number_xml.find("<w:abstractNum ")]
+                main_number_xml_post = main_number_xml[main_number_xml.rfind("</w:num>")+8:]
+                main_number_xml = main_number_xml_pre
+                for scheme in main_abs_num.values():
+                    main_number_xml+=scheme
+                for scheme in main_num.values():
+                    main_number_xml+=scheme
+                main_number_xml+=main_number_xml_post
+            #print(main_number_xml)
+    rels_xml = "\n".join([rel_xml_dec,etree.tostring(rel_dom).decode("utf8")])
+    print(rels_xml)
+
+
+
     #All files assimilated
     with io.open(os.path.join(tmp_dir,"word/document.xml"), 'w', encoding="utf8") as f:
         f.write(main_xml_content)
     with io.open(os.path.join(tmp_dir,"word/numbering.xml"), 'w', encoding="utf8") as f:
         f.write(main_number_xml)
+    with io.open(os.path.join(tmp_dir,"word/_rels/document.xml.rels"), 'w', encoding="utf8") as f:
+        f.write(rels_xml)
+    # rewrite the rel file
     with zipfile.ZipFile(file_name_out, "w") as docx:
         for filename in filenames:
             docx.write(os.path.join(tmp_dir,filename), filename)
