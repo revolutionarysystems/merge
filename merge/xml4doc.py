@@ -2,7 +2,7 @@ import xmltodict
 import iso8601
 import json
 import datetime
-from .testData import xml0, xml1
+#from .testData import xml0, xml1
 from .gd_resource_utils import folder_file,file_content_as
 from .resource_utils import strip_xml_dec,get_xml_content
 import lxml.etree as etree
@@ -147,11 +147,6 @@ def getData(test_case = None, payload=None, payload_type="xml", params = None, d
         data = {}
         for key in params.keys():
             dictify(data, key, params[key])
-    #todo, test case db
-    elif test_case == "0":
-        data = xmltodict.parse(xml0) 
-    elif test_case == "1":
-        data = xmltodict.parse(xml1) 
     elif data_file:
         doc_xml = get_xml_content(local_data_folder, remote_data_folder, data_file)
 #        data_doc_id = folder_file(data_folder, data_file)["id"]

@@ -259,7 +259,7 @@ def process_extract(step, localFileName, subs):
 def process_email(step, localFileName, you, credentials):
     return email_file(localFileName, step["from"], you, step["subject"], credentials) 
 
-# push file to server
+# push file to resource library
 def process_push(cwd, step, localFileName, template_local_folder, subs, payload=""):
     file_name = push_local_txt(cwd, step["folder"], localFileName+step["local_ext"], payload)  
     return {"file":file_name, "link":subs["site"]+"file/?name="+file_name.split("/")[-1]+"&path="+template_local_folder}

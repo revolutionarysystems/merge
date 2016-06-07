@@ -4,15 +4,15 @@ import pytz
 import iso8601
 import datetime
 import zipfile
-from .config import install_name, remote_library, local_root
+from .config import install_name, remote_library, gdrive_root, local_root,extend_path
 from .gd_resource_utils import (folder, folder_contents, exportFile, getFile, folder_item, file_content_as, 
-        gd_folder_files, gd_path_equivalent)
+        gd_folder_files, gd_path_equivalent, gd_folder_files, gd_folder_item)
 
 ## Local Resource management
 
 def get_working_dir():
     cwd = os.getcwd()
-    if (cwd.find("home")>=0):  
+    if (cwd.find("home")>=0 and extend_path):  
         cwd = os.path.join(cwd,install_name)
     if (cwd.find("scripts")>=0):  
         cwd = cwd.replace("\scripts","")
@@ -147,9 +147,14 @@ def refresh_files(path, local_dir, parent='root', mimeType='*', fields="nextPage
     for file in files:
         doc_id =file["id"]
         cwd = get_working_dir()
-        localFileName = cwd+"/"+local_root+"/"+local_dir+"/"+file["name"]
+        localFileName = os.path.join(cwd, local_root, local_dir, file["name"])
         if file["mimeType"] == 'application/vnd.google-apps.folder':
-            pass
+            # create local 
+            print(file)
+            print(localFileName)
+            if not os.path.exists(localFileName):
+                os.makedirs(localFileName) #actually a directory
+            files_info.append({"folder": localFileName})
         elif file["mimeType"] == 'application/vnd.google-apps.document':
             if localFileName.find(".") < 0: # no extension
                 files_info.append(exportFile(doc_id, localFileName+".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
@@ -194,5 +199,15 @@ def zip_local_dirs(path, zip_file_name, selected_subdirs = ["templates", "flows"
                 ziph.write(os.path.join(root, file), relpath)
     ziph.close()
     return zip_name
+
+def remote_link(filename, subfolder):
+    filepath = get_local_dir(subfolder)
+    remote = gd_path_equivalent(subfolder)
+    remote_folder = folder(remote)
+    file_details = gd_folder_item(remote, filename)
+    "https://docs.google.com/document/d/1S8gJeCD_vDjbM2JKk8Ojkt-6Uj_fdn_NQPdzHeQnn0Y/edit?usp=sharing"
+#    return "https://drive.google.com/open?id={}".format(file_details["id"])
+    return "https://drive.google.com/file/d/{}/view?usp=sharing".format(file_details["id"])
+#    return "https://docs.google.com/document/d/{}/edit?usp=sharing".format(file_details["id"])
 
 

@@ -8,7 +8,7 @@ from random import randint
 from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
 #from .merge_utils import get_local_dir
-from .resource_utils import get_working_dir, get_local_txt_content,get_local_dir, refresh_files, zip_local_dirs
+from .resource_utils import get_working_dir, get_local_txt_content,get_local_dir, refresh_files, zip_local_dirs, remote_link
 from traceback import format_exc
 from dash.forms import UploadZipForm
 from .config import remote_library, gdrive_root, local_root
@@ -81,7 +81,6 @@ def merge_raw(request, method="POST"):
 
 
 def push_raw(request, method="POST"):
-    print(">> push_raw")
     if method=="GET":
         params = request.GET
     else:
@@ -153,8 +152,6 @@ def push_raw_wrapped(request, method="POST"):
 @csrf_exempt
 def push(request):
     return JsonResponse(push_raw_wrapped(request))
-    
-
 
 def merge_get(request):
     return JsonResponse(merge_raw_wrapped(request, method="GET"))
@@ -193,6 +190,16 @@ def file_raw(request):
 
 def file(request):
     return file_raw(request)
+
+
+def file_link(request):
+    params = request.GET
+    filename = getParamDefault(params, "name", None)
+    subfolder = getParamDefault(params, "path", "output")
+    response = {"remote":remote_link(filename, subfolder)}
+    return JsonResponse(response)
+
+
 
 def refresh(request):
     if remote_library:
