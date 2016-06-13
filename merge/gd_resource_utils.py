@@ -138,6 +138,7 @@ def uploadFile(fileName, folder, mimeType):
 #### Navigate Drive folders
 
 def folder_contents(parent, mimeType='application/vnd.google-apps.folder', fields="nextPageToken, files(id, name, mimeType, parents, modifiedTime)"):
+    print("> folder_contents")
     if mimeType=="*":
         q = "trashed = false and '"+parent+"' in parents"
     else:
@@ -181,6 +182,7 @@ def folder(path, parent='root', create_if_absent=False):
     return ls_list(path_parts, parent=parent, create_if_absent=create_if_absent)
 
 def gd_folder_files(path, parent='root', mimeType='*', fields="nextPageToken, files(id, name, mimeType, parents)"):
+        print(">gd_folder_files")
         foldr = folder(path, parent)
         contents = folder_contents(foldr["id"], mimeType=mimeType, fields=fields)
         return contents
