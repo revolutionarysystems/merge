@@ -138,7 +138,6 @@ def uploadFile(fileName, folder, mimeType):
 #### Navigate Drive folders
 
 def folder_contents(parent, mimeType='application/vnd.google-apps.folder', fields="nextPageToken, files(id, name, mimeType, parents, modifiedTime)"):
-    print("> folder_contents")
     if mimeType=="*":
         q = "trashed = false and '"+parent+"' in parents"
     else:
@@ -166,7 +165,6 @@ def ls_list(pathlist, parent='root', create_if_absent=False):
         next_level = folder_item(parent, pathlist[0])
     except FileNotFoundError as ex:
         if create_if_absent:
-            print(">>Try to create",  parent, pathlist[0])
             next_level = create_folder(parent, pathlist[0])
         else:
             raise ex   
@@ -182,7 +180,6 @@ def folder(path, parent='root', create_if_absent=False):
     return ls_list(path_parts, parent=parent, create_if_absent=create_if_absent)
 
 def gd_folder_files(path, parent='root', mimeType='*', fields="nextPageToken, files(id, name, mimeType, parents)"):
-        print(">gd_folder_files")
         foldr = folder(path, parent)
         contents = folder_contents(foldr["id"], mimeType=mimeType, fields=fields)
         return contents
@@ -254,5 +251,4 @@ def gd_build_folders():
             ]
     for subfolder in folders:
         path = gd_path_equivalent(subfolder) 
-        print(path)
         folder(path, create_if_absent=True)  
